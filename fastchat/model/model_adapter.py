@@ -76,6 +76,18 @@ class BaseModelAdapter:
             model = AutoModel.from_pretrained(
                 model_path, low_cpu_mem_usage=True, **from_pretrained_kwargs
             )
+
+        config = AutoConfig.from_pretrained(model_path)
+        config.heavy_ratio = 0.1
+        config.recent_ratio = 0.1
+        from utils_hh_latest.modify_llama import convert_kvcache_llama_heavy_recent, LlamaAttention_heavy_hitter
+
+        import copy
+        checkpoint = copy.deepcopy(model.state_dict())
+        model = convert_kvcache_llama_heavy_recent(model, config)
+        model.load_state_dict(checkpoint)
+        model.half().cuda()
+
         return model, tokenizer
 
     def load_compress_model(self, model_path, device, torch_dtype, revision="main"):

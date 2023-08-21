@@ -110,13 +110,21 @@ def get_model_answers(
                     do_sample = True
 
                 # some models may error out when generating long outputs
-                try:
+                if True:
+                    for name, m in model.named_modules():
+                        if "heavy_hitter" in str(type(m)):
+                            total_len = len(input_ids[0]) + max_new_token
+                            local_budget = int(total_len * 0.1)
+                            hh_budget = int(total_len * 0.1)
+                            m._reset_budget(local_budget, hh_budget)
+
                     output_ids = model.generate(
                         torch.as_tensor(input_ids).cuda(),
                         do_sample=do_sample,
                         temperature=temperature,
                         max_new_tokens=max_new_token,
                     )
+
                     if model.config.is_encoder_decoder:
                         output_ids = output_ids[0]
                     else:
@@ -137,9 +145,9 @@ def get_model_answers(
 
                     if conv.name == "xgen" and output.startswith("Assistant:"):
                         output = output.replace("Assistant:", "", 1).strip()
-                except RuntimeError as e:
-                    print("ERROR question ID: ", question["question_id"])
-                    output = "ERROR"
+                #except RuntimeError as e:
+                #    print(f"ERROR. question ID: {question['question_id']}, error: {e}")
+                #    output = "ERROR"
 
                 turns.append(output)
                 conv.messages[-1][-1] = output
